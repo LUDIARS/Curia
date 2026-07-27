@@ -7,6 +7,9 @@ contextBridge.exposeInMainWorld("curia", {
   stop: (id) => ipcRenderer.invoke("curia:stop", id),
   openLogs: (id) => ipcRenderer.invoke("curia:open-logs", id),
   openData: (id) => ipcRenderer.invoke("curia:open-data", id),
+  getSettings: () => ipcRenderer.invoke("curia:get-settings"),
+  saveSettings: (input) => ipcRenderer.invoke("curia:save-settings", input),
+  restart: (id) => ipcRenderer.invoke("curia:restart", id),
   onStatus: (callback) => {
     const listener = (_event, payload) => callback(payload);
     ipcRenderer.on("curia:status", listener);
