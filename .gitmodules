@@ -4,3 +4,7 @@
 [submodule "apps/discutere"]
 	path = apps/discutere
 	url = https://github.com/LUDIARS/Discutere.git
+[submodule "apps/corpus"]
+	path = apps/corpus
+	url = https://github.com/LUDIARS/Corpus.git
+	branch = feat/enterprise-electron-capability-base

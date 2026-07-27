@@ -1,0 +1,22 @@
+{
+  "name": "curia",
+  "productName": "Curia",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Voluptas + Discutere 統合デスクトップスイート (起動メニュー)",
+  "main": "electron/main.mjs",
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "dev": "electron .",
+    "dist:dir": "electron-builder --dir",
+    "dist:win": "electron-builder --win --publish never"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.1.0",
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.6"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Curia</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f5f4f0; --rail: #ecebe5; --card: #ffffff; --ink: #26241f; --muted: #7a766c;
+    --line: #e3e1da; --accent: #7d5bd6;
+    --ok: #2e9e6b; --warn: #c78a1b; --err: #c8503c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1d1c1a; --rail: #232220; --card: #262522; --ink: #ece9e2; --muted: #97928a; --line: #3a3833; }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: "Segoe UI", "Hiragino Sans", sans-serif;
+    display: flex; height: 100vh; overflow: hidden;
+  }
+  /* 左レール: 幅は electron/main.mjs の RAIL_WIDTH と一致させる */
+  nav {
+    width: 232px; min-width: 232px; background: var(--rail);
+    border-right: 1px solid var(--line);
+    padding: 20px 12px; display: flex; flex-direction: column; gap: 4px;
+  }
+  nav .brand { font-size: 17px; font-weight: 600; letter-spacing: .05em; padding: 0 8px 4px; }
+  nav .brand small { display: block; font-size: 10px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+  nav button.tab {
+    display: flex; align-items: center; gap: 8px;
+    font: inherit; font-size: 13px; text-align: left;
+    padding: 9px 10px; border: 0; border-radius: 8px;
+    background: transparent; color: var(--ink); cursor: pointer;
+  }
+  nav button.tab:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  nav button.tab.active { background: var(--accent); color: #fff; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.running { background: var(--ok); }
+  .dot.starting { background: var(--warn); }
+  .dot.error { background: var(--err); }
+  nav .spacer { flex: 1; }
+  nav .note { font-size: 10px; color: var(--muted); padding: 0 8px; }
+
+  main { flex: 1; overflow-y: auto; padding: 28px; }
+  h1 { font-size: 18px; }
+  p.sub { color: var(--muted); font-size: 12px; margin: 4px 0 20px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px 20px; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .meta { flex: 1; min-width: 0; }
+  .meta h2 { font-size: 16px; }
+  .meta p { color: var(--muted); font-size: 12px; margin-top: 3px; }
+  .meta .badge {
+    display: inline-block; font-size: 10px; color: var(--accent);
+    border: 1px solid var(--accent); border-radius: 999px; padding: 1px 8px; margin-top: 6px;
+  }
+  .meta .error { color: var(--err); font-size: 12px; margin-top: 6px; white-space: pre-wrap; }
+  .state {
+    font-size: 11px; padding: 3px 10px; border-radius: 999px; white-space: nowrap;
+    border: 1px solid var(--line); color: var(--muted);
+  }
+  .state.running { color: var(--ok); border-color: var(--ok); }
+  .state.starting { color: var(--warn); border-color: var(--warn); }
+  .state.error { color: var(--err); border-color: var(--err); }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  button.act {
+    font: inherit; font-size: 12px; padding: 7px 14px; border-radius: 8px;
+    border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer;
+  }
+  button.act.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.act:disabled { opacity: .45; cursor: default; }
+  footer { color: var(--muted); font-size: 11px; margin-top: 18px; }
+</style>
+</head>
+<body>
+  <nav id="rail">
+    <div class="brand">Curia<small>LUDIARS スイート</small></div>
+    <!-- タブは JS が描画 -->
+    <div class="spacer"></div>
+    <div class="note">バックエンドは独立プロセス。タブ選択で自動起動します。</div>
+  </nav>
+  <main>
+    <h1>ダッシュボード</h1>
+    <p class="sub">サービスの起動状態と操作 — フロントは左のタブに統合表示</p>
+    <div id="apps"></div>
+    <footer>ウィンドウを閉じるとサーバも終了します。設定は各サービスのデータフォルダから。</footer>
+  </main>
+
+<script>
+  const STATE_LABEL = { stopped: "停止中", starting: "起動中…", running: "稼働中", error: "エラー" };
+  const railEl = document.getElementById("rail");
+  const appsEl = document.getElementById("apps");
+  const brandEl = railEl.querySelector(".brand");
+
+  function renderRail(payload) {
+    railEl.querySelectorAll("button.tab").forEach((b) => b.remove());
+    const tabs = [
+      { id: "menu", label: "ダッシュボード", state: null },
+      ...payload.apps.map((a) => ({ id: a.id, label: a.name, state: a.state })),
+    ];
+    let anchor = brandEl;
+    for (const t of tabs) {
+      const b = document.createElement("button");
+      b.className = "tab" + (payload.active === t.id ? " active" : "");
+      if (t.state !== null) {
+        const dot = document.createElement("span");
+        dot.className = `dot ${t.state}`;
+        b.append(dot);
+      }
+      b.append(document.createTextNode(t.label));
+      b.addEventListener("click", () => curia.show(t.id));
+      anchor.after(b);
+      anchor = b;
+    }
+  }
+
+  function renderCards(payload) {
+    appsEl.replaceChildren(...payload.apps.map((s) => {
+      const card = document.createElement("div");
+      card.className = "card";
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      const title = document.createElement("h2");
+      title.textContent = s.name;
+      const desc = document.createElement("p");
+      desc.textContent = s.description + (s.url ? ` — ${s.url}` : "");
+      meta.append(title, desc);
+      if (s.manifest) {
+        const badge = document.createElement("span");
+        badge.className = "badge";
+        badge.textContent = `corpus manifest: ${s.manifest.service} (api ${s.manifest.corpusApi ?? "?"})`;
+        meta.append(badge);
+      }
+      if (s.lastError) {
+        const err = document.createElement("p");
+        err.className = "error";
+        err.textContent = s.lastError;
+        meta.append(err);
+      }
+
+      const state = document.createElement("span");
+      state.className = `state ${s.state}`;
+      state.textContent = STATE_LABEL[s.state] ?? s.state;
+
+      const actions = document.createElement("div");
+      actions.className = "actions";
+      const buttons = [
+        ["起動", "primary", () => curia.start(s.id), s.state === "stopped" || s.state === "error"],
+        ["表示", "primary", () => curia.show(s.id), s.state === "running"],
+        ["停止", "", () => curia.stop(s.id), s.state === "running" || s.state === "starting"],
+        ["ログ", "", () => curia.openLogs(s.id), true],
+        ["データ", "", () => curia.openData(s.id), Boolean(s.dataDir)],
+      ];
+      for (const [label, cls, onClick, enabled] of buttons) {
+        const b = document.createElement("button");
+        b.textContent = label;
+        b.className = "act" + (cls ? ` ${cls}` : "");
+        b.disabled = !enabled;
+        b.addEventListener("click", onClick);
+        actions.append(b);
+      }
+
+      card.append(meta, state, actions);
+      return card;
+    }));
+  }
+
+  function render(payload) {
+    renderRail(payload);
+    renderCards(payload);
+  }
+
+  curia.onStatus(render);
+  curia.list().then(render);
+  setInterval(() => curia.list().then(render), 2000);
+</script>
+</body>
+</html>
