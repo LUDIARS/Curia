@@ -89,8 +89,13 @@ export class ServerManager {
       this.#setState("error", { error: err.message });
       return;
     }
-    this.#log(`[curia] fork ${spec.modulePath}`);
-    const child = this.ctx.fork(spec.modulePath, [], spec.options);
+    this.#log(`[curia] ${spec.spawnKind ?? "fork"} ${spec.modulePath} ${(spec.args ?? []).join(" ")}`);
+    // spawnKind "node": Electron バイナリを ELECTRON_RUN_AS_NODE=1 で純 Node として spawn
+    // (tsx 等、子プロセスを再 spawn するランナーは utilityProcess では動かないため。
+    //  Corpus capability base の EmbeddedCorpusServer と同じパターン)。
+    const child = spec.spawnKind === "node"
+      ? this.ctx.spawnNode(spec.modulePath, spec.args ?? [], spec.options)
+      : this.ctx.fork(spec.modulePath, spec.args ?? [], spec.options);
     this.child = child;
     child.stdout?.on("data", (d) => this.#log(String(d).trimEnd()));
     child.stderr?.on("data", (d) => this.#log(`[err] ${String(d).trimEnd()}`));
@@ -145,7 +150,8 @@ export class ServerManager {
       if (!this.child) throw new Error("起動中にプロセスが終了しました。ログを確認してください");
       try {
         const res = await fetch(healthUrl);
-        if (res.ok) return healthUrl.replace(/\/health$/, "/");
+        // healthLenient: HTTP 応答さえあれば up (専用 /health を持たないアプリ用)
+        if (res.ok || this.def.healthLenient) return healthUrl.replace(/\/health$/, "/");
         lastErr = new Error(`health check: HTTP ${res.status}`);
       } catch (err) {
         lastErr = err;
