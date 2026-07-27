@@ -33,9 +33,8 @@ const diRoot = join(root, "apps", "discutere");
 run("submodule init", "git", ["submodule", "update", "--init", "--recursive"]);
 run("Voluptas deps", "npm", ["ci"], voRoot);
 run("Discutere deps", "npm", ["ci"], diRoot);
-if (!existsSync(join(diRoot, "lib", "lapilli", "package.json"))) {
-  run("Discutere submodules", "npm", ["run", "setup:submodules"], diRoot);
-}
+// checkout 済みでも各パッケージの build が要るので常に実行 (Di 側スクリプトは冪等)。
+run("Discutere submodules (init + build)", "npm", ["run", "setup:submodules"], diRoot);
 run("Discutere build", "npm", ["run", "build"], diRoot);
 run(
   "Discutere better-sqlite3 rebuild (Electron ABI)",
