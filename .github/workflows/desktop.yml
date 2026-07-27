@@ -1,0 +1,25 @@
+name: Desktop (Windows exe)
+
+# 手動 dispatch のみ (実配布運用は未開始。DESIGN.md §7)。
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          # apps/voluptas が private のため、org repo:read PAT が必要。
+          token: ${{ secrets.SUBMODULE_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run setup
+      - run: npm run dist:win
+      - uses: actions/upload-artifact@v4
+        with:
+          name: compages-windows-${{ github.sha }}
+          path: release/*.exe

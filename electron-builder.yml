@@ -1,0 +1,36 @@
+# Compages パッケージ設定 (Windows)。asar 無効 = ネイティブアドオン + cwd 相対読みのため
+# (Di 単体版 electron-builder.yml と同方針)。
+appId: com.ludiars.compages
+productName: Compages
+asar: false
+directories:
+  output: release
+files:
+  - electron/**
+  - ui/**
+  - package.json
+  # Voluptas: ローカルモード実行に必要な範囲のみ
+  - apps/voluptas/player-profile-server/desktop/**
+  - apps/voluptas/player-profile-server/src/**
+  - apps/voluptas/player-profile-server/scripts/data/**
+  - apps/voluptas/player-profile-server/frontend/dist/**
+  - apps/voluptas/player-profile-server/lib/**
+  - apps/voluptas/player-profile-server/node_modules/**
+  - apps/voluptas/player-profile-server/package.json
+  # Discutere: ビルド済み dist + 実行時読み取りデータ
+  - apps/discutere/dist/**
+  - apps/discutere/node_modules/**
+  - apps/discutere/lib/**
+  - apps/discutere/data/games/**
+  - apps/discutere/data/affects/**
+  - apps/discutere/worker-home/**
+  - apps/discutere/discutere.config.example.json
+  - apps/discutere/package.json
+  - "!**/*.map"
+win:
+  target:
+    - nsis
+    - portable
+nsis:
+  oneClick: true
+  perMachine: false

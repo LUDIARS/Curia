@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Compages</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f5f4f0; --card: #ffffff; --ink: #26241f; --muted: #7a766c;
+    --line: #e3e1da; --accent: #7d5bd6;
+    --ok: #2e9e6b; --warn: #c78a1b; --err: #c8503c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1d1c1a; --card: #262522; --ink: #ece9e2; --muted: #97928a; --line: #3a3833; }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: "Segoe UI", "Hiragino Sans", sans-serif;
+    padding: 28px; min-height: 100vh;
+  }
+  h1 { font-size: 20px; letter-spacing: .04em; }
+  p.sub { color: var(--muted); font-size: 12px; margin: 4px 0 20px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px 20px; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .meta { flex: 1; min-width: 0; }
+  .meta h2 { font-size: 16px; }
+  .meta p { color: var(--muted); font-size: 12px; margin-top: 3px; }
+  .meta .error { color: var(--err); font-size: 12px; margin-top: 6px; white-space: pre-wrap; }
+  .state {
+    font-size: 11px; padding: 3px 10px; border-radius: 999px; white-space: nowrap;
+    border: 1px solid var(--line); color: var(--muted);
+  }
+  .state.running { color: var(--ok); border-color: var(--ok); }
+  .state.starting { color: var(--warn); border-color: var(--warn); }
+  .state.error { color: var(--err); border-color: var(--err); }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  button {
+    font: inherit; font-size: 12px; padding: 7px 14px; border-radius: 8px;
+    border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer;
+  }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button:disabled { opacity: .45; cursor: default; }
+  footer { color: var(--muted); font-size: 11px; margin-top: 18px; }
+  footer a { color: inherit; }
+</style>
+</head>
+<body>
+  <h1>Compages</h1>
+  <p class="sub">LUDIARS スイート起動メニュー — Voluptas / Discutere</p>
+  <div id="apps"></div>
+  <footer>全ウィンドウを閉じるとサーバも終了します。設定はアプリごとのデータフォルダから。</footer>
+
+<script>
+  const STATE_LABEL = { stopped: "停止中", starting: "起動中…", running: "稼働中", error: "エラー" };
+  const container = document.getElementById("apps");
+
+  function render(snapshots) {
+    container.replaceChildren(...snapshots.map((s) => {
+      const card = document.createElement("div");
+      card.className = "card";
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      const title = document.createElement("h2");
+      title.textContent = s.name;
+      const desc = document.createElement("p");
+      desc.textContent = s.description + (s.url ? ` — ${s.url}` : "");
+      meta.append(title, desc);
+      if (s.lastError) {
+        const err = document.createElement("p");
+        err.className = "error";
+        err.textContent = s.lastError;
+        meta.append(err);
+      }
+
+      const state = document.createElement("span");
+      state.className = `state ${s.state}`;
+      state.textContent = STATE_LABEL[s.state] ?? s.state;
+
+      const actions = document.createElement("div");
+      actions.className = "actions";
+      const buttons = [
+        ["起動", "primary", () => compages.start(s.id), s.state === "stopped" || s.state === "error"],
+        ["開く", "primary", () => compages.open(s.id), s.state === "running"],
+        ["停止", "", () => compages.stop(s.id), s.state === "running" || s.state === "starting"],
+        ["ログ", "", () => compages.openLogs(s.id), true],
+        ["データ", "", () => compages.openData(s.id), Boolean(s.dataDir)],
+      ];
+      for (const [label, cls, onClick, enabled] of buttons) {
+        const b = document.createElement("button");
+        b.textContent = label;
+        if (cls) b.className = cls;
+        b.disabled = !enabled;
+        b.addEventListener("click", onClick);
+        actions.append(b);
+      }
+
+      card.append(meta, state, actions);
+      return card;
+    }));
+  }
+
+  compages.onStatus(render);
+  compages.list().then(render);
+  setInterval(() => compages.list().then(render), 2000);
+</script>
+</body>
+</html>
