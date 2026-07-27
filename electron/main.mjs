@@ -1,9 +1,10 @@
 /**
- * Curia メインプロセス — 起動メニュー + Vo/Di サーバプロセス管理。
- * 方式と決定事項は DESIGN.md。サーバコード (submodule) は無改変。
+ * Curia メインプロセス — 統合 hub shell + Vo/Di サーバプロセス管理。
+ * バックエンドはサービスごとに独立プロセス (utilityProcess)、フロントエンドは
+ * 1 ウィンドウ (左レール + WebContentsView タブ) に統合する。DESIGN.md §3-§4。
  */
 
-import { app, BrowserWindow, Menu, shell, utilityProcess } from "electron";
+import { app, BrowserWindow, Menu, shell, utilityProcess, WebContentsView } from "electron";
 import { ipcMain } from "electron/main";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,21 +12,24 @@ import { buildRegistry } from "./registry.mjs";
 import { ServerManager } from "./manager.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
+const RAIL_WIDTH = 232; // ui/shell.html の左レール幅と一致させる
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) app.quit();
 
 /** @type {Map<string, ServerManager>} */
 const managers = new Map();
-/** @type {Map<string, BrowserWindow>} */
-const appWindows = new Map();
-let menuWindow = null;
+/** @type {Map<string, WebContentsView>} */
+const views = new Map();
+let shellWindow = null;
+let activeId = "menu";
 
 function broadcast() {
-  const snapshots = [...managers.values()].map((m) => m.snapshot());
-  for (const win of BrowserWindow.getAllWindows()) {
-    if (!win.isDestroyed()) win.webContents.send("curia:status", snapshots);
-  }
+  if (!shellWindow || shellWindow.isDestroyed()) return;
+  shellWindow.webContents.send("curia:status", {
+    active: activeId,
+    apps: [...managers.values()].map((m) => m.snapshot()),
+  });
 }
 
 function createManagers() {
@@ -33,17 +37,95 @@ function createManagers() {
     appRoot: app.getAppPath(),
     dataRoot: app.getPath("userData"),
     fork: utilityProcess.fork.bind(utilityProcess),
-    onChange: () => broadcast(),
+    onChange: (manager) => {
+      // タブ選択済みのサービスが running に達したら、その場でビューを出す。
+      if (manager.state === "running" && activeId === manager.def.id) ensureView(manager.def.id);
+      if (manager.state !== "running") dropView(manager.def.id);
+      broadcast();
+    },
   };
   for (const def of buildRegistry()) {
     managers.set(def.id, new ServerManager(def, ctx));
   }
 }
 
-function createMenuWindow() {
-  menuWindow = new BrowserWindow({
-    width: 760,
-    height: 560,
+function contentBounds() {
+  const [width, height] = shellWindow.getContentSize();
+  return { x: RAIL_WIDTH, y: 0, width: Math.max(0, width - RAIL_WIDTH), height };
+}
+
+function layoutViews() {
+  if (!shellWindow || shellWindow.isDestroyed()) return;
+  for (const [id, view] of views) {
+    const active = id === activeId;
+    view.setVisible(active);
+    if (active) view.setBounds(contentBounds());
+  }
+}
+
+/** running 中のサービスの WebContentsView を用意して現在のタブに合わせて表示する。 */
+function ensureView(id) {
+  const manager = managers.get(id);
+  if (!manager || manager.state !== "running" || !manager.url) return;
+  let view = views.get(id);
+  if (!view) {
+    view = new WebContentsView({
+      webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true },
+    });
+    const baseUrl = manager.url.replace(/\/$/, "");
+    const isInternal = (url) => url === baseUrl || url.startsWith(`${baseUrl}/`);
+    view.webContents.setWindowOpenHandler(({ url }) => {
+      if (!isInternal(url)) {
+        void shell.openExternal(url);
+        return { action: "deny" };
+      }
+      return { action: "allow" };
+    });
+    view.webContents.on("will-navigate", (e, url) => {
+      if (!isInternal(url)) {
+        e.preventDefault();
+        void shell.openExternal(url);
+      }
+    });
+    void view.webContents.loadURL(`${baseUrl}/`);
+    shellWindow.contentView.addChildView(view);
+    views.set(id, view);
+  }
+  layoutViews();
+}
+
+function dropView(id) {
+  const view = views.get(id);
+  if (!view) return;
+  views.delete(id);
+  if (shellWindow && !shellWindow.isDestroyed()) shellWindow.contentView.removeChildView(view);
+  view.webContents.close();
+  if (activeId === id) {
+    activeId = "menu";
+    broadcast();
+  }
+}
+
+/** タブ切替。停止中のサービスタブを選んだら起動も仕掛ける (統合フロントの入口一本化)。 */
+function showTab(id) {
+  activeId = id;
+  if (id !== "menu") {
+    const manager = managers.get(id);
+    if (manager) {
+      if (manager.state === "stopped" || manager.state === "error") void manager.start();
+      ensureView(id);
+    }
+  }
+  layoutViews();
+  broadcast();
+}
+
+function createShellWindow() {
+  shellWindow = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    minWidth: 960,
+    minHeight: 600,
     title: "Curia — LUDIARS スイート",
     webPreferences: {
       preload: join(here, "preload.cjs"),
@@ -52,55 +134,24 @@ function createMenuWindow() {
       sandbox: true,
     },
   });
-  void menuWindow.loadFile(join(here, "..", "ui", "menu.html"));
-  menuWindow.on("closed", () => {
-    menuWindow = null;
+  void shellWindow.loadFile(join(here, "..", "ui", "shell.html"));
+  shellWindow.on("resize", layoutViews);
+  shellWindow.on("closed", () => {
+    shellWindow = null;
   });
-}
-
-/** アプリの BrowserWindow を開く (既存があればフォーカス)。外部リンクは OS ブラウザへ。 */
-function openAppWindow(id) {
-  const manager = managers.get(id);
-  if (!manager || manager.state !== "running" || !manager.url) return;
-  const existing = appWindows.get(id);
-  if (existing && !existing.isDestroyed()) {
-    existing.focus();
-    return;
-  }
-  const baseUrl = manager.url.replace(/\/$/, "");
-  const win = new BrowserWindow({
-    width: 1280,
-    height: 860,
-    title: manager.def.name,
-    webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true },
-  });
-  const isInternal = (url) => url === baseUrl || url.startsWith(`${baseUrl}/`);
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    if (!isInternal(url)) {
-      void shell.openExternal(url);
-      return { action: "deny" };
-    }
-    return { action: "allow" };
-  });
-  win.webContents.on("will-navigate", (e, url) => {
-    if (!isInternal(url)) {
-      e.preventDefault();
-      void shell.openExternal(url);
-    }
-  });
-  void win.loadURL(`${baseUrl}/`);
-  win.on("closed", () => appWindows.delete(id));
-  appWindows.set(id, win);
 }
 
 function registerIpc() {
-  ipcMain.handle("curia:list", () => [...managers.values()].map((m) => m.snapshot()));
+  ipcMain.handle("curia:list", () => ({
+    active: activeId,
+    apps: [...managers.values()].map((m) => m.snapshot()),
+  }));
+  ipcMain.handle("curia:show", (_e, id) => showTab(id));
   ipcMain.handle("curia:start", (_e, id) => managers.get(id)?.start());
   ipcMain.handle("curia:stop", (_e, id) => {
+    dropView(id);
     managers.get(id)?.stop();
-    appWindows.get(id)?.close();
   });
-  ipcMain.handle("curia:open", (_e, id) => openAppWindow(id));
   ipcMain.handle("curia:open-logs", (_e, id) => {
     const m = managers.get(id);
     if (m) void shell.openPath(m.logPath);
@@ -112,15 +163,15 @@ function registerIpc() {
 }
 
 app.on("second-instance", () => {
-  if (menuWindow) {
-    if (menuWindow.isMinimized()) menuWindow.restore();
-    menuWindow.focus();
+  if (shellWindow) {
+    if (shellWindow.isMinimized()) shellWindow.restore();
+    shellWindow.focus();
   } else {
-    createMenuWindow();
+    createShellWindow();
   }
 });
 
-// 全ウィンドウを閉じたらサーバごと終了 (常駐しない。DESIGN.md §4)。
+// ウィンドウを閉じたらサーバごと終了 (常駐しない。DESIGN.md §4)。
 app.on("window-all-closed", () => app.quit());
 app.on("before-quit", () => {
   for (const m of managers.values()) m.stop();
@@ -145,7 +196,7 @@ if (gotLock) {
       );
       createManagers();
       registerIpc();
-      createMenuWindow();
+      createShellWindow();
     })
     .catch((err) => {
       console.error("[curia] startup failed:", err);

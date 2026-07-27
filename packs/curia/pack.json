@@ -1,0 +1,7 @@
+{
+  "name": "curia",
+  "description": "Curia スイートパック — Vo/Di のローカルサービス管理 + フル UI タブ + ダッシュボード",
+  "modules": [
+    "services"
+  ]
+}

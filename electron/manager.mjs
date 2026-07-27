@@ -22,6 +22,7 @@ export class ServerManager {
     this.state = "stopped";
     this.url = null;
     this.lastError = null;
+    this.manifest = null;
     this.logPath = join(ctx.dataRoot, "logs", `${def.id}.log`);
   }
 
@@ -33,9 +34,33 @@ export class ServerManager {
       state: this.state,
       url: this.url,
       lastError: this.lastError,
+      manifest: this.manifest,
       logPath: this.logPath,
       dataDir: this.def.dataDir(this.ctx),
     };
+  }
+
+  /**
+   * Corpus service manifest (/.well-known/corpus-service.json) の検出。
+   * あれば表示名と corpusApi をダッシュボードに出す (無くても何も壊れない)。
+   * Corpus プラグインパック化 (DESIGN.md §10) の下準備。
+   */
+  async #probeManifest(baseUrl) {
+    try {
+      const res = await fetch(`${baseUrl.replace(/\/$/, "")}/.well-known/corpus-service.json`);
+      if (!res.ok) return;
+      const body = await res.json();
+      if (body && typeof body === "object" && typeof body.service === "string") {
+        this.manifest = {
+          service: body.service,
+          displayName: typeof body.displayName === "string" ? body.displayName : body.service,
+          corpusApi: typeof body.corpusApi === "number" ? body.corpusApi : null,
+        };
+        this.ctx.onChange(this);
+      }
+    } catch {
+      /* manifest 無しは正常系 (Di は未対応) */
+    }
   }
 
   #log(line) {
@@ -84,6 +109,7 @@ export class ServerManager {
       const url = await this.#waitReady(child);
       if (this.child !== child) return; // 待機中に stop された
       this.#setState("running", { url, error: null });
+      void this.#probeManifest(url);
     } catch (err) {
       if (this.child === child) {
         this.#log(`[curia] ready wait failed: ${err.message}`);
