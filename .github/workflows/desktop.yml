@@ -21,5 +21,5 @@ jobs:
       - run: npm run dist:win
       - uses: actions/upload-artifact@v4
         with:
-          name: compages-windows-${{ github.sha }}
+          name: curia-windows-${{ github.sha }}
           path: release/*.exe

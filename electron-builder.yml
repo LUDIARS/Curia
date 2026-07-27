@@ -1,7 +1,7 @@
-# Compages パッケージ設定 (Windows)。asar 無効 = ネイティブアドオン + cwd 相対読みのため
+# Curia パッケージ設定 (Windows)。asar 無効 = ネイティブアドオン + cwd 相対読みのため
 # (Di 単体版 electron-builder.yml と同方針)。
-appId: com.ludiars.compages
-productName: Compages
+appId: com.ludiars.curia
+productName: Curia
 asar: false
 directories:
   output: release

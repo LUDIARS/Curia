@@ -1,5 +1,5 @@
 /**
- * Compages メインプロセス — 起動メニュー + Vo/Di サーバプロセス管理。
+ * Curia メインプロセス — 起動メニュー + Vo/Di サーバプロセス管理。
  * 方式と決定事項は DESIGN.md。サーバコード (submodule) は無改変。
  */
 
@@ -24,7 +24,7 @@ let menuWindow = null;
 function broadcast() {
   const snapshots = [...managers.values()].map((m) => m.snapshot());
   for (const win of BrowserWindow.getAllWindows()) {
-    if (!win.isDestroyed()) win.webContents.send("compages:status", snapshots);
+    if (!win.isDestroyed()) win.webContents.send("curia:status", snapshots);
   }
 }
 
@@ -44,7 +44,7 @@ function createMenuWindow() {
   menuWindow = new BrowserWindow({
     width: 760,
     height: 560,
-    title: "Compages — LUDIARS スイート",
+    title: "Curia — LUDIARS スイート",
     webPreferences: {
       preload: join(here, "preload.cjs"),
       nodeIntegration: false,
@@ -94,18 +94,18 @@ function openAppWindow(id) {
 }
 
 function registerIpc() {
-  ipcMain.handle("compages:list", () => [...managers.values()].map((m) => m.snapshot()));
-  ipcMain.handle("compages:start", (_e, id) => managers.get(id)?.start());
-  ipcMain.handle("compages:stop", (_e, id) => {
+  ipcMain.handle("curia:list", () => [...managers.values()].map((m) => m.snapshot()));
+  ipcMain.handle("curia:start", (_e, id) => managers.get(id)?.start());
+  ipcMain.handle("curia:stop", (_e, id) => {
     managers.get(id)?.stop();
     appWindows.get(id)?.close();
   });
-  ipcMain.handle("compages:open", (_e, id) => openAppWindow(id));
-  ipcMain.handle("compages:open-logs", (_e, id) => {
+  ipcMain.handle("curia:open", (_e, id) => openAppWindow(id));
+  ipcMain.handle("curia:open-logs", (_e, id) => {
     const m = managers.get(id);
     if (m) void shell.openPath(m.logPath);
   });
-  ipcMain.handle("compages:open-data", (_e, id) => {
+  ipcMain.handle("curia:open-data", (_e, id) => {
     const dir = managers.get(id)?.snapshot().dataDir;
     if (dir) void shell.openPath(dir);
   });
@@ -148,7 +148,7 @@ if (gotLock) {
       createMenuWindow();
     })
     .catch((err) => {
-      console.error("[compages] startup failed:", err);
+      console.error("[curia] startup failed:", err);
       app.exit(1);
     });
 }

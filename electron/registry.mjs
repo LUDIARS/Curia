@@ -43,7 +43,7 @@ export function buildRegistry() {
           options: {
             cwd: join(serverRoot, "desktop"),
             stdio: ["ignore", "pipe", "pipe"],
-            serviceName: "compages-voluptas",
+            serviceName: "curia-voluptas",
           },
         };
       },
@@ -73,7 +73,7 @@ export function buildRegistry() {
             cwd,
             env: { ...process.env, DISCUTERE_CONFIG: configPath },
             stdio: ["ignore", "pipe", "pipe"],
-            serviceName: "compages-discutere",
+            serviceName: "curia-discutere",
           },
         };
       },

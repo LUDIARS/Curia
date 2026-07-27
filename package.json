@@ -1,5 +1,6 @@
 {
-  "name": "compages",
+  "name": "curia",
+  "productName": "Curia",
   "version": "0.1.0",
   "private": true,
   "description": "Voluptas + Discutere 統合デスクトップスイート (起動メニュー)",

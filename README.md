@@ -1,8 +1,8 @@
-# Compages
+# Curia
 
 **Voluptas + Discutere 統合デスクトップスイート** — 両アプリを 1 つの Electron
-アプリから起動・停止・閲覧できる「起動メニュー」。compāgēs (羅: 部分を結合して
-ひとつにした構造・骨組) から命名。
+アプリから起動・停止・閲覧できる「起動メニュー」。cūria (羅: 元老院議事堂 =
+統治が行われる場。各アプリが集まる玄関) から命名。
 
 - **Voluptas** (プレイヤーリサーチ / ペルソナ分析) — Git-backed ローカルモード
 - **Discutere** (遊びの議論プラットフォーム) — Web UI (`/flow`) のローカル駆動
@@ -14,8 +14,8 @@
 ## セットアップ (開発)
 
 ```sh
-git clone --recursive https://github.com/LUDIARS/Compages.git
-cd Compages
+git clone --recursive https://github.com/LUDIARS/Curia.git
+cd Curia
 npm ci
 npm run setup     # submodule init + 両アプリの deps/build + better-sqlite3 の Electron ABI rebuild
 npm run dev       # 起動メニューを開く
@@ -26,12 +26,12 @@ npm run dev       # 起動メニューを開く
 1. `git submodule update --init --recursive`
 2. `apps/voluptas/player-profile-server` で `npm ci`
 3. `apps/discutere` で `npm ci` → `npm run setup:submodules` → `npm run build`
-4. `apps/discutere` の better-sqlite3 を Compages の Electron ABI へ rebuild
+4. `apps/discutere` の better-sqlite3 を Curia の Electron ABI へ rebuild
    (Discutere 単体を素の Node で動かすときは `apps/discutere` で `npm run app:rebuild:undo`)
 
 ## データ配置
 
-書き込みはすべて userData (`%APPDATA%/Compages`) 配下:
+書き込みはすべて userData (`%APPDATA%/Curia`) 配下:
 
 | パス | 内容 |
 |---|---|

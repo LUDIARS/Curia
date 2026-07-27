@@ -64,7 +64,7 @@ export class ServerManager {
       this.#setState("error", { error: err.message });
       return;
     }
-    this.#log(`[compages] fork ${spec.modulePath}`);
+    this.#log(`[curia] fork ${spec.modulePath}`);
     const child = this.ctx.fork(spec.modulePath, [], spec.options);
     this.child = child;
     child.stdout?.on("data", (d) => this.#log(String(d).trimEnd()));
@@ -73,7 +73,7 @@ export class ServerManager {
       if (this.child !== child) return; // 明示 stop 済み
       this.child = null;
       const unexpected = this.state === "starting" || this.state === "running";
-      this.#log(`[compages] exited code=${code}`);
+      this.#log(`[curia] exited code=${code}`);
       this.#setState(unexpected ? "error" : "stopped", {
         url: null,
         error: unexpected ? `プロセスが終了しました (code=${code})。ログを確認してください` : null,
@@ -86,7 +86,7 @@ export class ServerManager {
       this.#setState("running", { url, error: null });
     } catch (err) {
       if (this.child === child) {
-        this.#log(`[compages] ready wait failed: ${err.message}`);
+        this.#log(`[curia] ready wait failed: ${err.message}`);
         this.stop();
         this.#setState("error", { url: null, error: err.message });
       }

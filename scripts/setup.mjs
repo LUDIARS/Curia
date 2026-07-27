@@ -1,5 +1,5 @@
 /**
- * Compages セットアップ: submodule init → 両アプリの deps/build →
+ * Curia セットアップ: submodule init → 両アプリの deps/build →
  * Discutere better-sqlite3 の Electron ABI rebuild (DESIGN.md §3)。
  * どのステップで失敗したか分かるよう逐次実行・即時失敗。
  */

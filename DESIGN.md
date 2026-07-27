@@ -1,17 +1,19 @@
-# Compages 設計 — Vo+Di 統合デスクトップスイート
+# Curia 設計 — Vo+Di 統合デスクトップスイート
 
 > 状態: 初版 (2026-07-27)。neco 指示「Di もローカル駆動 / Vo と Di を Electron で起動する
 > 起動メニュー / 統合ビルド用リポ新設 (submodule 取込)」への設計 + 実装。
 
 ## 1. 命名
 
-「統合」= **Compages** (compāgēs, -is f.)。部分を結合してひとつにした構造・骨組・接合。
-Omnipotens 以外・既存 LUDIARS リポと非衝突を確認済み。略称候補 `Cg` (PROJECT-CODES 登録は別途)。
+「統治」= **Curia** (cūria, -ae f.)。元老院議事堂 = 統治が行われる場。両アプリが集まる
+玄関 (起動メニュー) の比喩。初案 Compages (結合構造) から neco 選定で改称 (2026-07-27)。
+既存 LUDIARS リポと非衝突 (Curare とは字面が近いので文中はフルネーム推奨)。
+略称は PROJECT-CODES 登録時に決定 (`Cu` は Curare 使用済み)。
 
 ## 2. リポ構成
 
 ```
-Compages/
+Curia/
 ├── apps/voluptas    (submodule, private)
 ├── apps/discutere   (submodule, public)
 ├── electron/        main.mjs / manager.mjs / registry.mjs / seed.mjs / preload.cjs
@@ -23,7 +25,7 @@ Compages/
 
 - 両アプリのサーバコードは**無改変**。統合はランチャー側の責務に閉じる
   (Vo/Di 本体への変更が必要になったら各リポへ PR を出す。このリポに fork を抱えない)。
-- Voluptas が private のため **Compages も private**。CI の submodule checkout は
+- Voluptas が private のため **Curia も private**。CI の submodule checkout は
   `SUBMODULE_TOKEN` (repo:read PAT) を使う。
 
 ## 3. プロセスモデル
@@ -56,7 +58,7 @@ Compages/
 - 「開く」は専用 BrowserWindow (アプリごとに 1 枚、外部リンクは OS ブラウザへ — Di 単体版の
   ポリシー踏襲)。メニューを閉じてもアプリウィンドウは残り、全ウィンドウを閉じると
   サーバごと終了 (常駐しない)。
-- 状態は preload 経由の IPC (`compages:*`) + push イベント。ポーリングは 2s。
+- 状態は preload 経由の IPC (`curia:*`) + push イベント。ポーリングは 2s。
 - stdout/stderr は `<userData>/logs/<app>.log` に tee (packaged で stdout が見えないため)。
 
 ## 5. データ配置と単体版との関係
@@ -104,6 +106,6 @@ Discord は任意 (config に botToken を書けば従来通り)。残ギャッ�
 
 ## 9. 非目標
 
-- Vo/Di 単体デスクトップ版の廃止 (併存。Compages は「両方使う人」向け)。
+- Vo/Di 単体デスクトップ版の廃止 (併存。Curia は「両方使う人」向け)。
 - サーバコードの fork・改変をこのリポに抱えること。
 - 常駐 / 自動起動 (Excubitor 系の常駐運用は別レイヤー。これは手元起動ツール)。
