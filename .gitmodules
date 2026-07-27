@@ -1,0 +1,6 @@
+[submodule "apps/voluptas"]
+	path = apps/voluptas
+	url = https://github.com/LUDIARS/Voluptas.git
+[submodule "apps/discutere"]
+	path = apps/discutere
+	url = https://github.com/LUDIARS/Discutere.git
