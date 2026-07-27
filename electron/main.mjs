@@ -10,6 +10,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildRegistry } from "./registry.mjs";
 import { ServerManager } from "./manager.mjs";
+import { getSettings, saveSettings } from "./settings.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const RAIL_WIDTH = 232; // ui/shell.html の左レール幅と一致させる
@@ -109,7 +110,7 @@ function dropView(id) {
 /** タブ切替。停止中のサービスタブを選んだら起動も仕掛ける (統合フロントの入口一本化)。 */
 function showTab(id) {
   activeId = id;
-  if (id !== "menu") {
+  if (id !== "menu" && id !== "settings") {
     const manager = managers.get(id);
     if (manager) {
       if (manager.state === "stopped" || manager.state === "error") void manager.start();
@@ -159,6 +160,15 @@ function registerIpc() {
   ipcMain.handle("curia:open-data", (_e, id) => {
     const dir = managers.get(id)?.snapshot().dataDir;
     if (dir) void shell.openPath(dir);
+  });
+  const settingsCtx = () => ({ appRoot: app.getAppPath(), dataRoot: app.getPath("userData") });
+  ipcMain.handle("curia:get-settings", () => getSettings(settingsCtx()));
+  ipcMain.handle("curia:save-settings", (_e, input) => saveSettings(settingsCtx(), input));
+  ipcMain.handle("curia:restart", async (_e, id) => {
+    dropView(id);
+    managers.get(id)?.stop();
+    await new Promise((r) => setTimeout(r, 1500)); // 停止猶予 (ポート解放待ち)
+    await managers.get(id)?.start();
   });
 }
 

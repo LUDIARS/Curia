@@ -73,6 +73,13 @@
   button.act.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
   button.act:disabled { opacity: .45; cursor: default; }
   footer { color: var(--muted); font-size: 11px; margin-top: 18px; }
+  label.field { display: block; font-size: 12px; color: var(--muted); margin: 10px 0; }
+  label.field input, label.field select {
+    display: block; width: min(420px, 100%); margin-top: 4px;
+    font: inherit; font-size: 13px; color: var(--ink);
+    background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px;
+  }
+  .formnote { font-size: 11px; color: var(--muted); margin: 6px 0; }
 </style>
 </head>
 <body>
@@ -83,10 +90,57 @@
     <div class="note">バックエンドは独立プロセス。タブ選択で自動起動します。</div>
   </nav>
   <main>
-    <h1>ダッシュボード</h1>
-    <p class="sub">サービスの起動状態と操作 — フロントは左のタブに統合表示</p>
-    <div id="apps"></div>
-    <footer>ウィンドウを閉じるとサーバも終了します。設定は各サービスのデータフォルダから。</footer>
+    <section id="dashboard">
+      <h1>ダッシュボード</h1>
+      <p class="sub">サービスの起動状態と操作 — フロントは左のタブに統合表示</p>
+      <div id="apps"></div>
+      <footer>ウィンドウを閉じるとサーバも終了します。詳細設定は「設定」タブから。</footer>
+    </section>
+    <section id="settings" hidden>
+      <h1>設定</h1>
+      <p class="sub">保存後は該当サービスの再起動で反映されます</p>
+      <div class="card" style="display:block">
+        <h2 style="font-size:16px">Discutere</h2>
+        <p class="formnote" id="di-config-path"></p>
+        <label class="field">LLM backend
+          <select id="di-backend">
+            <option value="anthropic">anthropic — Claude API / OAuth (既定)</option>
+            <option value="claude-cli">claude-cli — Claude Code CLI 経由</option>
+            <option value="local">local — OpenAI 互換ローカル LLM (Ollama 等)</option>
+            <option value="worker-pool">worker-pool — 常駐ワーカープール</option>
+            <option value="mock">mock — テスト用</option>
+          </select>
+        </label>
+        <label class="field">モデル ID (空 = 既定)
+          <input id="di-model" placeholder="claude-haiku-4-5-20251001">
+        </label>
+        <div id="di-local-fields">
+          <label class="field">local: Base URL
+            <input id="di-local-url" placeholder="http://localhost:11434/v1">
+          </label>
+          <label class="field">local: モデル
+            <input id="di-local-model" placeholder="gemma4:12b">
+          </label>
+        </div>
+        <label class="field">Discord bot token (空 = Discord 連携なしで Web UI のみ)
+          <input id="di-token" type="password" autocomplete="off">
+        </label>
+        <label class="field">HTTP ポート
+          <input id="di-port" type="number" min="1" max="65535">
+        </label>
+        <p class="formnote">ANTHROPIC_API_KEY は環境変数での指定を推奨 (config には保存しません)。</p>
+        <div class="actions" style="justify-content:flex-start;margin-top:12px">
+          <button class="act" id="di-save">保存</button>
+          <button class="act primary" id="di-save-restart">保存して Discutere を再起動</button>
+          <span id="di-status" class="formnote"></span>
+        </div>
+      </div>
+      <div class="card" style="display:block">
+        <h2 style="font-size:16px">Voluptas</h2>
+        <p class="formnote">データリポジトリや Name の設定は Voluptas タブ内の Settings 画面で行います
+          (正本 = %LOCALAPPDATA%/Volputas/local-config.json)。</p>
+      </div>
+    </section>
   </main>
 
 <script>
@@ -100,6 +154,7 @@
     const tabs = [
       { id: "menu", label: "ダッシュボード", state: null },
       ...payload.apps.map((a) => ({ id: a.id, label: a.name, state: a.state })),
+      { id: "settings", label: "設定", state: null },
     ];
     let anchor = brandEl;
     for (const t of tabs) {
@@ -172,7 +227,60 @@
   function render(payload) {
     renderRail(payload);
     renderCards(payload);
+    const settingsActive = payload.active === "settings";
+    document.getElementById("dashboard").hidden = settingsActive;
+    const settingsEl = document.getElementById("settings");
+    if (settingsActive && settingsEl.hidden) void loadSettings();
+    settingsEl.hidden = !settingsActive;
   }
+
+  // ── 設定タブ ──
+  const $ = (id) => document.getElementById(id);
+
+  function syncLocalFields() {
+    $("di-local-fields").style.display = $("di-backend").value === "local" ? "" : "none";
+  }
+  $("di-backend").addEventListener("change", syncLocalFields);
+
+  async function loadSettings() {
+    const s = await curia.getSettings();
+    $("di-config-path").textContent = s.discutere.configPath;
+    $("di-backend").value = s.discutere.llmBackend;
+    $("di-model").value = s.discutere.llmModel;
+    $("di-local-url").value = s.discutere.localBaseUrl;
+    $("di-local-model").value = s.discutere.localModel;
+    $("di-token").value = s.discutere.discordBotToken;
+    $("di-port").value = s.discutere.serverPort;
+    $("di-status").textContent = "";
+    syncLocalFields();
+  }
+
+  async function saveSettings(restart) {
+    $("di-status").textContent = "保存中…";
+    const result = await curia.saveSettings({
+      discutere: {
+        llmBackend: $("di-backend").value,
+        llmModel: $("di-model").value.trim(),
+        localBaseUrl: $("di-local-url").value.trim(),
+        localModel: $("di-local-model").value.trim(),
+        discordBotToken: $("di-token").value.trim(),
+        serverPort: Number($("di-port").value),
+      },
+    });
+    if (!result.ok) {
+      $("di-status").textContent = `保存失敗: ${result.error}`;
+      return;
+    }
+    if (restart) {
+      $("di-status").textContent = "保存しました — Discutere を再起動中…";
+      await curia.restart("discutere");
+      $("di-status").textContent = "保存して再起動しました";
+    } else {
+      $("di-status").textContent = "保存しました (反映は再起動後)";
+    }
+  }
+  $("di-save").addEventListener("click", () => void saveSettings(false));
+  $("di-save-restart").addEventListener("click", () => void saveSettings(true));
 
   curia.onStatus(render);
   curia.list().then(render);

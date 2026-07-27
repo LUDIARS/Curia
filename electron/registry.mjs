@@ -32,7 +32,10 @@ export function buildRegistry() {
           appRoot, "apps", "voluptas", "player-profile-server", "desktop", "serverProcess.js"
         );
         if (!existsSync(modulePath)) {
-          throw new Error("apps/voluptas が未セットアップです (npm run setup)");
+          throw new Error(
+            "Voluptas のローカルモードエントリがまだ main に入っていません "
+            + "(feat/dual-mode-persona-ui のマージ待ち。DESIGN.md §10 T9b)"
+          );
         }
         const serverRoot = join(appRoot, "apps", "voluptas", "player-profile-server");
         if (!existsSync(join(serverRoot, "node_modules"))) {
@@ -67,11 +70,15 @@ export function buildRegistry() {
         const cwd = join(dataRoot, "discutere");
         seedDiscutereUserData(join(appRoot, "apps", "discutere"), cwd);
         const configPath = join(cwd, "discutere.config.json");
+        // NODE_ENV は継承しない: 開発シェルの NODE_ENV=production が漏れると
+        // Di の production 起動ガード (botToken 必須) が誤発動する。デスクトップ起動では未設定が正。
+        const env = { ...process.env, DISCUTERE_CONFIG: configPath };
+        delete env.NODE_ENV;
         return {
           modulePath,
           options: {
             cwd,
-            env: { ...process.env, DISCUTERE_CONFIG: configPath },
+            env,
             stdio: ["ignore", "pipe", "pipe"],
             serviceName: "curia-discutere",
           },
