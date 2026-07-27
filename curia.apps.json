@@ -1,0 +1,10 @@
+{
+  "$comment": "Curia が管理するアプリの manifest。enabled:false で即座に切り離せる (タブ/カード/起動対象から消える。submodule と electron/apps/<id>.mjs を消せば完全除去)。順序 = タブ表示順。",
+  "apps": [
+    { "id": "voluptas", "enabled": true },
+    { "id": "discutere", "enabled": true },
+    { "id": "anatomia", "enabled": true, "optional": true },
+    { "id": "praeforma", "enabled": true, "optional": true },
+    { "id": "thaleia", "enabled": true, "optional": true }
+  ]
+}

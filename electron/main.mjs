@@ -6,6 +6,7 @@
 
 import { app, BrowserWindow, Menu, shell, utilityProcess, WebContentsView } from "electron";
 import { ipcMain } from "electron/main";
+import { spawn } from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildRegistry } from "./registry.mjs";
@@ -38,6 +39,13 @@ function createManagers() {
     appRoot: app.getAppPath(),
     dataRoot: app.getPath("userData"),
     fork: utilityProcess.fork.bind(utilityProcess),
+    spawnNode: (modulePath, args, options) =>
+      spawn(process.execPath, [modulePath, ...args], {
+        cwd: options.cwd,
+        env: { ...(options.env ?? process.env), ELECTRON_RUN_AS_NODE: "1" },
+        stdio: ["ignore", "pipe", "pipe"],
+        windowsHide: true,
+      }),
     onChange: (manager) => {
       // タブ選択済みのサービスが running に達したら、その場でビューを出す。
       if (manager.state === "running" && activeId === manager.def.id) ensureView(manager.def.id);
@@ -45,7 +53,7 @@ function createManagers() {
       broadcast();
     },
   };
-  for (const def of buildRegistry()) {
+  for (const def of buildRegistry(ctx.appRoot)) {
     managers.set(def.id, new ServerManager(def, ctx));
   }
 }

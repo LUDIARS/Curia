@@ -26,6 +26,19 @@ files:
   - apps/discutere/worker-home/**
   - apps/discutere/discutere.config.example.json
   - apps/discutere/package.json
+  # Optional アプリ (curia.apps.json で無効ならビルド前に files から外してよい)
+  - apps/anatomia/bin/**
+  - apps/anatomia/dist/**
+  - apps/anatomia/node_modules/**
+  - apps/anatomia/package.json
+  - apps/praeforma/server/**
+  - apps/praeforma/web/dist/**
+  - apps/praeforma/node_modules/**
+  - apps/praeforma/package.json
+  - apps/thaleia/src/**
+  - apps/thaleia/node_modules/**
+  - apps/thaleia/package.json
+  - curia.apps.json
   - "!**/*.map"
 win:
   target:

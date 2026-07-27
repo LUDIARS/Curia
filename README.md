@@ -1,8 +1,14 @@
 # Curia
 
-**Voluptas + Discutere 統合デスクトップスイート** — バックエンドはサービスごとに
-独立プロセス、フロントエンドは 1 ウィンドウ (左レール + タブ) に統合する hub shell。
+**LUDIARS 統合デスクトップスイート** — バックエンドはサービスごとに独立プロセス、
+フロントエンドは 1 ウィンドウ (左レール + タブ) に統合する hub shell。
 cūria (羅: 元老院議事堂 = 統治が行われる場。各アプリが集まる玄関) から命名。
+
+- **コア**: Voluptas (プレイヤーリサーチ) / Discutere (議論プラットフォーム)
+- **optional** (着脱可能, DESIGN.md §11): Anatomia (コード解析) / Praeforma (仕様書↔実装) /
+  Thaleia (企画↔実装トレーサビリティ)
+
+アプリの有効/無効は `curia.apps.json` で切り替える (enabled:false で即切り離し)。
 
 - **Voluptas** (プレイヤーリサーチ / ペルソナ分析) — Git-backed ローカルモード
 - **Discutere** (遊びの議論プラットフォーム) — Web UI (`/flow`) のローカル駆動

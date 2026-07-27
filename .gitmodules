@@ -8,3 +8,12 @@
 	path = apps/corpus
 	url = https://github.com/LUDIARS/Corpus.git
 	branch = feat/enterprise-electron-capability-base
+[submodule "apps/anatomia"]
+	path = apps/anatomia
+	url = https://github.com/LUDIARS/Anatomia.git
+[submodule "apps/praeforma"]
+	path = apps/praeforma
+	url = https://github.com/LUDIARS/Praeforma.git
+[submodule "apps/thaleia"]
+	path = apps/thaleia
+	url = https://github.com/LUDIARS/Thaleia.git

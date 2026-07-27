@@ -164,3 +164,30 @@ T9b で packs/curia/services/process-manager.ts に一本化する。
 「全部 Corpus パネルに寄せる」ことは目標にしない — Vo (React SPA) / Di (サーバ描画) の
 フル UI は iframe タブが最も情報量が多く、パネルは要約・横断ビュー (ペルソナブリッジ状況、
 アンケート回答数、議論の結論一覧など) に向く。
+
+## 11. Optional アプリ (Anatomia / Praeforma / Thaleia) — 着脱可能な統合
+
+neco 指示 (2026-07-28)。**すぐ切り離せる**ことを構造で保証する:
+
+- **manifest = `curia.apps.json`** が有効化と表示順の正本。`enabled:false` にするだけで
+  タブ / カード / 起動対象 / setup 対象から消える (コード変更不要)。
+- アプリ定義は `electron/apps/<id>.mjs` に 1 ファイルずつ分離。完全除去 =
+  manifest の行 + 定義ファイル + submodule の 3 点削除で、他アプリに影響しない。
+- setup は optional アプリの submodule 未取得 / manifest 無効を**エラーにせずスキップ**する。
+
+| アプリ | 起動 | ポート | 備考 |
+|---|---|---|---|
+| Anatomia | `bin/anatomia.mjs web` を utilityProcess で (要 tsc build) | 4200 | kuzu=N-API で rebuild 不要。cwd=`<userData>/anatomia` |
+| Praeforma | tsx CLI + `server/src/local.ts` を **spawnKind "node"** で (ローカルモード: SQLite + Cernere 不要 + 固定ユーザ) | 8889 | better-sqlite3 は setup で Electron ABI rebuild。web は `build:web` |
+| Thaleia | tsx CLI + `src/index.ts` を **spawnKind "node"** で | 8890 | Praeforma×Anatomia の突合サービス。両者が起動していると機能する |
+
+**spawnKind "node"** = `child_process.spawn(process.execPath, …, ELECTRON_RUN_AS_NODE=1)`。
+tsx は子プロセスを再 spawn するため utilityProcess では動かない (再 spawn が別 Electron
+アプリとして起動 → single-instance lock / utility_init クラッシュ)。Corpus capability base の
+EmbeddedCorpusServer と同じパターンで、純 Node 子プロセスとして起動する。
+
+- ready 判定は 3 つとも lenient health (HTTP 応答があれば up。専用 /health を仮定しない)。
+- ポートは各サービスの既定に従い、env (`CURIA_ANATOMIA_PORT` 等) で上書き可。
+  既に同ポートで単体起動中なら起動失敗としてカードにエラーが出る (併用しない前提)。
+- Thaleia ⇄ Praeforma/Anatomia の接続先はそれぞれの config/env の既定 (localhost 固定ポート)
+  をそのまま使う — Curia は配線に関与しない (関与し始めたら切り離せなくなる)。
