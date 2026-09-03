@@ -18,16 +18,26 @@ import thaleia from "./apps/thaleia.mjs";
 const here = dirname(fileURLToPath(import.meta.url));
 
 /**
+ * @typedef {object} AppCtx
+ * @property {string} appRoot
+ * @property {string} dataRoot
+ * @property {() => Record<string, string>} [upstreamBaseUrls]
+ *   有効アプリの base URL (id -> URL)。main.mjs が registry から解決して渡す。
+ */
+
+/**
  * @typedef {object} AppDef
  * @property {string} id
  * @property {string} name
  * @property {string} description
- * @property {(ctx: {appRoot: string, dataRoot: string}) => {modulePath: string, args: string[], options: object} | never} forkSpec
+ * @property {(ctx: AppCtx) => {modulePath: string, args: string[], options: object} | never} forkSpec
  *   fork するモジュール/引数/オプション。前提を満たさない場合は Error を投げる (カードに表示)。
  * @property {"message" | "health"} readyKind
  * @property {boolean} [healthLenient] true なら HTTP 応答があれば up 扱い (ステータス不問)
- * @property {(ctx: {appRoot: string, dataRoot: string}) => string | null} healthUrl
- * @property {(ctx: {appRoot: string, dataRoot: string}) => string | null} dataDir
+ * @property {(ctx: AppCtx) => string | null} [baseUrl] 他アプリへ渡す接続先 (末尾スラッシュ無し)。
+ *   持つアプリだけが upstream.mjs の解決対象になる (= 上流として配線できる)。
+ * @property {(ctx: AppCtx) => string | null} healthUrl
+ * @property {(ctx: AppCtx) => string | null} dataDir
  * @property {boolean} shutdownByMessage
  */
 

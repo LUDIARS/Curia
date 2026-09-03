@@ -1,0 +1,17 @@
+{
+  "name": "hub-shell",
+  "description": "統合 hub shell 本体。Electron メインプロセス、1 ウィンドウ + 左レール + WebContentsView タブ、各サーバプロセスのライフサイクル管理 (DESIGN.md §3-§4)。",
+  "presetRules": [],
+  "templateRules": [],
+  "membership": [
+    {
+      "pathPattern": "(^|/)electron/(main|manager)\\.mjs$"
+    },
+    {
+      "pathPattern": "(^|/)electron/preload\\.cjs$"
+    },
+    {
+      "pathPattern": "(^|/)ui/shell\\.html$"
+    }
+  ]
+}

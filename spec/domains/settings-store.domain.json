@@ -1,0 +1,17 @@
+{
+  "name": "settings-store",
+  "description": "設定の読み書き。Discutere config JSON への深いマージと、Curia 自身の設定ストア (userData/curia.settings.json)。設定画面のバックエンドとフロントエンド。",
+  "presetRules": [],
+  "templateRules": [],
+  "membership": [
+    {
+      "pathPattern": "(^|/)electron/(settings|curia-settings)\\.mjs$"
+    },
+    {
+      "pathPattern": "(^|/)electron/__tests__/(curia-settings|settings)\\.test\\.mjs$"
+    },
+    {
+      "pathPattern": "(^|/)ui/settings-tab\\.js$"
+    }
+  ]
+}

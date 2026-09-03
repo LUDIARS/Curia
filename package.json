@@ -7,6 +7,7 @@
   "main": "electron/main.mjs",
   "scripts": {
     "setup": "node scripts/setup.mjs",
+    "test": "node --test \"electron/**/*.test.mjs\"",
     "dev": "electron .",
     "dist:dir": "electron-builder --dir",
     "dist:win": "electron-builder --win --publish never"

@@ -179,15 +179,36 @@ neco 指示 (2026-07-28)。**すぐ切り離せる**ことを構造で保証す�
 |---|---|---|---|
 | Anatomia | `bin/anatomia.mjs web` を utilityProcess で (要 tsc build) | 4200 | kuzu=N-API で rebuild 不要。cwd=`<userData>/anatomia` |
 | Praeforma | tsx CLI + `server/src/local.ts` を **spawnKind "node"** で (ローカルモード: SQLite + Cernere 不要 + 固定ユーザ) | 8889 | better-sqlite3 は setup で Electron ABI rebuild。web は `build:web` |
-| Thaleia | tsx CLI + `src/index.ts` を **spawnKind "node"** で | 8890 | Praeforma×Anatomia の突合サービス。両者が起動していると機能する |
+| Thaleia | tsx CLI + `src/index.ts` を **spawnKind "node"** で | 8890 | 施策設計ツール (成否リスクのスコア化)。上流 = Anatomia / Discutere / Praeforma (Curia が env で配線) + 任意で Genius / Augur / Ludus (設定タブ) |
 
 **spawnKind "node"** = `child_process.spawn(process.execPath, …, ELECTRON_RUN_AS_NODE=1)`。
 tsx は子プロセスを再 spawn するため utilityProcess では動かない (再 spawn が別 Electron
 アプリとして起動 → single-instance lock / utility_init クラッシュ)。Corpus capability base の
 EmbeddedCorpusServer と同じパターンで、純 Node 子プロセスとして起動する。
 
-- ready 判定は 3 つとも lenient health (HTTP 応答があれば up。専用 /health を仮定しない)。
+- ready 判定は Anatomia / Praeforma が lenient health (HTTP 応答があれば up。専用 /health を
+  仮定しない)、Thaleia は専用の `GET /health` を厳密に見る。
 - ポートは各サービスの既定に従い、env (`CURIA_ANATOMIA_PORT` 等) で上書き可。
   既に同ポートで単体起動中なら起動失敗としてカードにエラーが出る (併用しない前提)。
-- Thaleia ⇄ Praeforma/Anatomia の接続先はそれぞれの config/env の既定 (localhost 固定ポート)
-  をそのまま使う — Curia は配線に関与しない (関与し始めたら切り離せなくなる)。
+
+### 上流の配線 (`electron/upstream.mjs`)
+
+当初は「Curia は配線に関与しない」方針だったが、Thaleia が施策設計ツールへ再定義され
+**Anatomia / Discutere / Praeforma を同時に読む**ようになったことで成立しなくなった
+(接続先を env で渡さないと 5 軸のうち 4 軸が missing に落ちる)。Curia はこの 3 つを
+同時に起動する唯一の器なので、接続先を知っているのも Curia だけになる。
+
+切り離し可能性は「**registry に載っているアプリしか解決しない**」ことで守る:
+
+- 各アプリ定義が `baseUrl(ctx)` を持ち、そこがポート既定値の正本 (二重管理しない)。
+  Discutere だけは config JSON がポートの正本なので `seed.mjs` の解決結果を返す。
+- `resolveUpstreamBaseUrls(registry, ctx)` は `buildRegistry()` の戻り値 (= 有効アプリ)
+  だけを見る。`curia.apps.json` で `enabled:false` にしたアプリは registry に現れないので
+  接続先も渡らない。
+- `applyUpstreamEnv()` は **別名キーも含めて必ず先に削除してから**設定する。開発シェルに
+  残った `ANATOMIA_URL` 等が漏れて「落ちている先を叩き続ける」ことを防ぐ。
+- 配線先: Thaleia ← `ANATOMIA_BASE_URL` / `DISCUTERE_BASE_URL` / `PRAEFORMA_BASE_URL`、
+  Praeforma ← `PRAEFORMA_ANATOMIA_URL` (Studio の関連処理グラフ)。
+- Curia が起動しない上流 (Genius / Augur CLI / Ludus リポ) は設定タブの任意入力を
+  `curia.settings.json` に持ち、入力があるときだけ env に積む。未入力ならその軸は
+  Thaleia 側で missing に落ちる (ダミー値を作らない)。

@@ -1,0 +1,11 @@
+{
+  "name": "corpus-pack",
+  "description": "Corpus プラグインパック側の Curia 実装 (DESIGN.md §10 T9b)。パネルとサービス spawn を Corpus capability base に寄せるための受け皿で、現状は暫定 shell と併存する。",
+  "presetRules": [],
+  "templateRules": [],
+  "membership": [
+    {
+      "pathPattern": "(^|/)packs/curia/services/[^/]+\\.ts$"
+    }
+  ]
+}

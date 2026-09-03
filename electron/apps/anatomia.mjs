@@ -25,7 +25,9 @@ export default {
     mkdirSync(cwd, { recursive: true });
     return {
       modulePath,
-      args: ["web"],
+      // `anatomia web` は env を見ず --port だけを取るので、CURIA_ANATOMIA_PORT の
+      // 上書きを実際の bind まで届かせる (baseUrl と bind をずらさない)。
+      args: ["web", "--port", String(PORT)],
       options: {
         cwd,
         stdio: ["ignore", "pipe", "pipe"],
@@ -35,6 +37,8 @@ export default {
   },
   readyKind: "health",
   healthLenient: true, // 応答さえあれば up (専用 /health を仮定しない)
+  // 上流として他アプリへ渡す接続先 (ポート既定値の正本はこのファイル)。
+  baseUrl: () => `http://127.0.0.1:${PORT}`,
   healthUrl: () => `http://127.0.0.1:${PORT}/`,
   dataDir: ({ dataRoot }) => join(dataRoot, "anatomia"),
   shutdownByMessage: false,

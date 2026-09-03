@@ -11,6 +11,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildRegistry } from "./registry.mjs";
 import { ServerManager } from "./manager.mjs";
+import { resolveUpstreamBaseUrls } from "./upstream.mjs";
 import { getSettings, saveSettings } from "./settings.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -53,7 +54,11 @@ function createManagers() {
       broadcast();
     },
   };
-  for (const def of buildRegistry(ctx.appRoot)) {
+  const registry = buildRegistry(ctx.appRoot);
+  // 上流の接続先は「有効なアプリ」だけから解決する (無効アプリの URL は誰にも渡らない)。
+  // Di はポートを config で変えられるので、起動のたびに解決し直す (関数のまま渡す)。
+  ctx.upstreamBaseUrls = () => resolveUpstreamBaseUrls(registry, ctx);
+  for (const def of registry) {
     managers.set(def.id, new ServerManager(def, ctx));
   }
 }
@@ -173,10 +178,22 @@ function registerIpc() {
   ipcMain.handle("curia:get-settings", () => getSettings(settingsCtx()));
   ipcMain.handle("curia:save-settings", (_e, input) => saveSettings(settingsCtx(), input));
   ipcMain.handle("curia:restart", async (_e, id) => {
+    const manager = managers.get(id);
+    if (!manager) {
+      return { ok: false, error: `アプリが無効か、見つかりません: ${id}` };
+    }
     dropView(id);
-    managers.get(id)?.stop();
+    manager.stop();
     await new Promise((r) => setTimeout(r, 1500)); // 停止猶予 (ポート解放待ち)
-    await managers.get(id)?.start();
+    await manager.start();
+    const snapshot = manager.snapshot();
+    if (snapshot.state !== "running") {
+      return {
+        ok: false,
+        error: snapshot.lastError ?? `${manager.def.name} を起動できませんでした`,
+      };
+    }
+    return { ok: true };
   });
 }
 

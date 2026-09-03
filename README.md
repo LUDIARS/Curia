@@ -6,7 +6,7 @@ cūria (羅: 元老院議事堂 = 統治が行われる場。各アプリが集�
 
 - **コア**: Voluptas (プレイヤーリサーチ) / Discutere (議論プラットフォーム)
 - **optional** (着脱可能, DESIGN.md §11): Anatomia (コード解析) / Praeforma (仕様書↔実装) /
-  Thaleia (企画↔実装トレーサビリティ)
+  Thaleia (施策設計ツール (成否リスクのスコア化))
 
 アプリの有効/無効は `curia.apps.json` で切り替える (enabled:false で即切り離し)。
 
@@ -42,6 +42,8 @@ npm run dev       # 起動メニューを開く
 | パス | 内容 |
 |---|---|
 | `discutere/` | Di の cwd (config / SQLite / KG / logs)。初回にリポ同梱データをシード |
+| `anatomia/` `praeforma/` `thaleia/` | optional アプリの cwd (それぞれのデータ) |
+| `curia.settings.json` | Curia 自身の設定 (Thaleia へ渡す Genius / Augur / Ludus の接続先) |
 | `logs/` | ランチャーが tee する各アプリの stdout/stderr |
 
 Voluptas ローカルモードの設定 (`%LOCALAPPDATA%/Volputas/local-config.json`) と

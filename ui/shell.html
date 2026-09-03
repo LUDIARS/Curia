@@ -136,6 +136,27 @@
         </div>
       </div>
       <div class="card" style="display:block">
+        <h2 style="font-size:16px">Thaleia</h2>
+        <p class="formnote" id="th-config-path"></p>
+        <p class="formnote">Anatomia / Praeforma / Discutere の接続先は Curia が自動で渡します
+          (curia.apps.json で無効にしたアプリの接続先は渡しません)。ここで指定するのは
+          Curia が起動しない上流だけです。空欄の上流は評価でその軸が missing になります。</p>
+        <label class="field">Genius base URL (判断カード。空 = 未使用)
+          <input id="th-genius" placeholder="http://127.0.0.1:4230">
+        </label>
+        <label class="field">Augur CLI のパス (テスト計画。空 = 未使用)
+          <input id="th-augur" placeholder="C:/path/to/Augur/bin/augur.mjs">
+        </label>
+        <label class="field">Ludus リポジトリのパス (凡庸性判定。空 = 未使用)
+          <input id="th-ludus" placeholder="C:/path/to/Ludus">
+        </label>
+        <div class="actions" style="justify-content:flex-start;margin-top:12px">
+          <button class="act" id="th-save">保存</button>
+          <button class="act primary" id="th-save-restart">保存して Thaleia を再起動</button>
+          <span id="th-status" class="formnote"></span>
+        </div>
+      </div>
+      <div class="card" style="display:block">
         <h2 style="font-size:16px">Voluptas</h2>
         <p class="formnote">データリポジトリや Name の設定は Voluptas タブ内の Settings 画面で行います
           (正本 = %LOCALAPPDATA%/Volputas/local-config.json)。</p>
@@ -143,6 +164,7 @@
     </section>
   </main>
 
+<script src="./settings-tab.js"></script>
 <script>
   const STATE_LABEL = { stopped: "停止中", starting: "起動中…", running: "稼働中", error: "エラー" };
   const railEl = document.getElementById("rail");
@@ -233,54 +255,6 @@
     if (settingsActive && settingsEl.hidden) void loadSettings();
     settingsEl.hidden = !settingsActive;
   }
-
-  // ── 設定タブ ──
-  const $ = (id) => document.getElementById(id);
-
-  function syncLocalFields() {
-    $("di-local-fields").style.display = $("di-backend").value === "local" ? "" : "none";
-  }
-  $("di-backend").addEventListener("change", syncLocalFields);
-
-  async function loadSettings() {
-    const s = await curia.getSettings();
-    $("di-config-path").textContent = s.discutere.configPath;
-    $("di-backend").value = s.discutere.llmBackend;
-    $("di-model").value = s.discutere.llmModel;
-    $("di-local-url").value = s.discutere.localBaseUrl;
-    $("di-local-model").value = s.discutere.localModel;
-    $("di-token").value = s.discutere.discordBotToken;
-    $("di-port").value = s.discutere.serverPort;
-    $("di-status").textContent = "";
-    syncLocalFields();
-  }
-
-  async function saveSettings(restart) {
-    $("di-status").textContent = "保存中…";
-    const result = await curia.saveSettings({
-      discutere: {
-        llmBackend: $("di-backend").value,
-        llmModel: $("di-model").value.trim(),
-        localBaseUrl: $("di-local-url").value.trim(),
-        localModel: $("di-local-model").value.trim(),
-        discordBotToken: $("di-token").value.trim(),
-        serverPort: Number($("di-port").value),
-      },
-    });
-    if (!result.ok) {
-      $("di-status").textContent = `保存失敗: ${result.error}`;
-      return;
-    }
-    if (restart) {
-      $("di-status").textContent = "保存しました — Discutere を再起動中…";
-      await curia.restart("discutere");
-      $("di-status").textContent = "保存して再起動しました";
-    } else {
-      $("di-status").textContent = "保存しました (反映は再起動後)";
-    }
-  }
-  $("di-save").addEventListener("click", () => void saveSettings(false));
-  $("di-save-restart").addEventListener("click", () => void saveSettings(true));
 
   curia.onStatus(render);
   curia.list().then(render);

@@ -1,0 +1,20 @@
+{
+  "name": "app-integration",
+  "description": "アプリの着脱と統合。curia.apps.json の manifest 解決、アプリ 1 つ分の定義 (起動 / health / データ配置)、上流サービスの接続先配線、userData のシード、setup 手順 (DESIGN.md §11)。",
+  "presetRules": [],
+  "templateRules": [],
+  "membership": [
+    {
+      "pathPattern": "(^|/)electron/apps/[^/]+\\.mjs$"
+    },
+    {
+      "pathPattern": "(^|/)electron/(registry|upstream|seed)\\.mjs$"
+    },
+    {
+      "pathPattern": "(^|/)electron/__tests__/upstream\\.test\\.mjs$"
+    },
+    {
+      "pathPattern": "(^|/)scripts/[^/]+\\.mjs$"
+    }
+  ]
+}
