@@ -1,0 +1,6 @@
+{
+  "service": "curia",
+  "include": ["electron/__tests__/settings.test.mjs"],
+  "runtime": { "autoImport": false },
+  "importFrom": "./contract-runtime.mjs"
+}

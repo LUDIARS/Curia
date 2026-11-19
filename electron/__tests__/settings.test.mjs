@@ -4,7 +4,9 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { discutereConfigPath, saveSettings } from "../settings.mjs";
+import { discutereConfigPath, getSettings, saveSettings } from "../settings.mjs";
+import { contract } from './contract-runtime.mjs'; /* augur-inject:import:46ac8184 */
+import augurContract_6635683f from '../../contracts/discutere-model-placeholder.contract.mjs'; /* augur-inject:contract-predicate:fbb9e142 */
 
 function withDataRoot(t) {
   const dataRoot = mkdtempSync(join(tmpdir(), "curia-settings-sections-"));
@@ -20,6 +22,34 @@ const VALID_DISCUTERE = {
   discordBotToken: "",
   serverPort: 3110,
 };
+
+export function readDiscutereModelPlaceholder() {
+  const shell = readFileSync(new URL("../../ui/shell.html", import.meta.url), "utf8");
+  const field = shell.match(/<input\b[^>]*\bid="di-model"[^>]*>/u)?.[0];
+  return field?.match(/\bplaceholder="([^"]*)"/u)?.[1];
+}
+// @ts-expect-error augur-inject
+readDiscutereModelPlaceholder = contract(readDiscutereModelPlaceholder, { ...augurContract_6635683f, contractId: 'C-1', mode: 'observe', sample: 1, where: 'electron/__tests__/settings.test.mjs:24', rule: 'contract-wrap', id: '6635683f' }); /* augur-inject:contract-wrap:6635683f */
+
+test("Discutere のモデル入力欄には役割名を例示する", () => {
+  assert.equal(readDiscutereModelPlaceholder(), "haiku");
+});
+
+test("Discutere のモデル設定は空欄、役割名、明示 ID をそのまま保存する", (t) => {
+  const dataRoot = withDataRoot(t);
+  const context = { appRoot: "unused", dataRoot };
+  const configPath = discutereConfigPath(dataRoot);
+  mkdirSync(dirname(configPath), { recursive: true });
+  writeFileSync(configPath, "{}", "utf8");
+
+  assert.equal(getSettings(context).discutere.llmModel, "");
+  for (const model of ["haiku", "provider-model-id", ""]) {
+    const input = { discutere: { ...VALID_DISCUTERE, llmModel: model } };
+    assert.deepEqual(saveSettings(context, input), { ok: true });
+    assert.equal(JSON.parse(readFileSync(configPath, "utf8")).llm.model, model);
+    assert.equal(getSettings(context).discutere.llmModel, model);
+  }
+});
 
 test("後続セクションが不正なら先行セクションも保存しない", (t) => {
   const dataRoot = withDataRoot(t);

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "contractsDir": "contracts",
+  "importFrom": "./contract-runtime.mjs",
+  "runtimeFile": "electron/__tests__/contract-runtime.mjs",
+  "contracts": [
+    {
+      "id": "C-1",
+      "criterion": "C-1 readDiscutereModelPlaceholder(…): Discutere のモデル入力欄に haiku を例示する",
+      "symbol": "readDiscutereModelPlaceholder",
+      "file": "electron/__tests__/settings.test.mjs",
+      "module": "./contracts/discutere-model-placeholder.contract.mjs",
+      "mode": "observe",
+      "sample": 1
+    }
+  ]
+}
